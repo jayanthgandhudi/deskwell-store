@@ -2,7 +2,7 @@
 
 A responsive e-commerce front end built with **React + Vite**: product browsing, search, filters, a product detail dialog, a shopping cart and saved items.
 
-**Live demo:** _add your Netlify / Vercel link here_
+**Live demo:** https://deskwell-store.vercel.app/
 
 ## Features
 - Search (debounced), category filter, max-price slider and sorting
