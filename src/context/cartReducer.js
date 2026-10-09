@@ -1,12 +1,10 @@
-import { getProduct } from "../data/products";
-
 // cart shape: { [productId]: quantity }
+// `stock` is passed in each action because products now come from the server.
 export function cartReducer(state, action) {
   switch (action.type) {
     case "add": {
-      const product = getProduct(action.id);
-      if (!product || product.stock === 0) return state;
-      const next = Math.min(product.stock, (state[action.id] || 0) + action.qty);
+      if (!action.stock) return state;
+      const next = Math.min(action.stock, (state[action.id] || 0) + action.qty);
       return { ...state, [action.id]: next };
     }
     case "setQty": {
@@ -14,9 +12,7 @@ export function cartReducer(state, action) {
         const { [action.id]: _removed, ...rest } = state;
         return rest;
       }
-      const product = getProduct(action.id);
-      if (!product) return state;
-      return { ...state, [action.id]: Math.min(action.qty, product.stock) };
+      return { ...state, [action.id]: Math.min(action.qty, action.stock) };
     }
     case "clear":
       return {};

@@ -1,13 +1,13 @@
-import { CATEGORIES, MAX_PRICE } from "../data/products";
+import { MAX_PRICE } from "../constants";
 import { money } from "../utils/format";
 
-export default function Controls({ filters, setFilters }) {
+export default function Controls({ categories, filters, setFilters }) {
   const update = (patch) => setFilters((f) => ({ ...f, ...patch }));
 
   return (
     <section className="controls" aria-label="Filters">
       <div className="chips">
-        {CATEGORIES.map((c) => (
+        {categories.map((c) => (
           <button
             key={c}
             className="chip"

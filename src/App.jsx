@@ -5,14 +5,14 @@ import ProductGrid from "./components/ProductGrid";
 import ProductModal from "./components/ProductModal";
 import CartDrawer from "./components/CartDrawer";
 import Toast from "./components/Toast";
-import { MAX_PRICE, PRODUCTS, FREE_DELIVERY_AT } from "./data/products";
+import { MAX_PRICE, FREE_DELIVERY_AT } from "./constants";
 import { useDebounce } from "./hooks/useDebounce";
 import { useStore } from "./context/StoreContext";
 import { filterProducts } from "./utils/filterProducts";
 import { money } from "./utils/format";
 
 export default function App() {
-  const { wish, toast } = useStore();
+  const { products, status, loadProducts, wish, toast } = useStore();
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState({
     category: "All",
@@ -25,9 +25,11 @@ export default function App() {
 
   const debouncedQuery = useDebounce(query, 250);
 
-  const products = useMemo(
-    () => filterProducts(PRODUCTS, { ...filters, query: debouncedQuery, wish }),
-    [filters, debouncedQuery, wish]
+  const categories = useMemo(() => ["All", ...new Set(products.map((p) => p.category))], [products]);
+
+  const visible = useMemo(
+    () => filterProducts(products, { ...filters, query: debouncedQuery, wish }),
+    [products, filters, debouncedQuery, wish]
   );
 
   return (
@@ -42,8 +44,22 @@ export default function App() {
         </p>
       </section>
 
-      <Controls filters={filters} setFilters={setFilters} />
-      <ProductGrid products={products} onOpen={setSelected} />
+      {status === "ready" && <Controls categories={categories} filters={filters} setFilters={setFilters} />}
+
+      {status === "loading" && (
+        <main>
+          <p className="count" role="status">Loading products…</p>
+        </main>
+      )}
+      {status === "error" && (
+        <main>
+          <div className="empty">
+            <p>We could not load the products. Check that the server is running.</p>
+            <button className="btn dark" onClick={() => loadProducts()}>Try again</button>
+          </div>
+        </main>
+      )}
+      {status === "ready" && <ProductGrid products={visible} onOpen={setSelected} />}
 
       <ProductModal product={selected} onClose={() => setSelected(null)} />
       <CartDrawer open={cartOpen} onClose={() => setCartOpen(false)} />

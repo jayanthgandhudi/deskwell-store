@@ -1,26 +1,49 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useStore } from "../context/StoreContext";
-import { FREE_DELIVERY_AT, getProduct } from "../data/products";
+import { FREE_DELIVERY_AT } from "../constants";
 import { money } from "../utils/format";
 
 export default function CartDrawer({ open, onClose }) {
-  const { cart, totals, setQty, checkout, notify } = useStore();
+  const { cart, totals, getProduct, setQty, placeOrder, notify } = useStore();
   const closeRef = useRef(null);
-  const entries = Object.entries(cart);
+  const [step, setStep] = useState("cart"); // cart | details
+  const [form, setForm] = useState({ name: "", email: "" });
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  // Only show lines whose product still exists on the server
+  const entries = Object.entries(cart).filter(([id]) => getProduct(id));
   const remaining = Math.max(0, FREE_DELIVERY_AT - totals.subtotal);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setStep("cart");
+      setError("");
+      return;
+    }
     closeRef.current?.focus();
     const onKey = (e) => e.key === "Escape" && onClose();
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
-  const handleCheckout = () => {
-    const total = checkout();
-    onClose();
-    notify(`Demo order placed: ${money(total)}`);
+  useEffect(() => {
+    if (totals.items === 0) setStep("cart");
+  }, [totals.items]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    try {
+      const order = await placeOrder(form);
+      notify(`Order #${order.id} placed: ${money(order.total)}`);
+      onClose();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -84,9 +107,42 @@ export default function CartDrawer({ open, onClose }) {
           <div className="row"><span>Subtotal</span><span>{money(totals.subtotal)}</span></div>
           <div className="row"><span>Delivery</span><span>{totals.delivery ? money(totals.delivery) : "Free"}</span></div>
           <div className="row total"><span>Total</span><span>{money(totals.total)}</span></div>
-          <button className="btn dark" disabled={totals.items === 0} onClick={handleCheckout}>
-            Place order
-          </button>
+
+          {step === "cart" ? (
+            <button className="btn dark" disabled={totals.items === 0} onClick={() => setStep("details")}>
+              Checkout
+            </button>
+          ) : (
+            <form className="checkout" onSubmit={handleSubmit}>
+              <label className="field">
+                Name
+                <input
+                  required
+                  maxLength={100}
+                  autoComplete="name"
+                  value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                />
+              </label>
+              <label className="field">
+                Email
+                <input
+                  required
+                  type="email"
+                  autoComplete="email"
+                  value={form.email}
+                  onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                />
+              </label>
+              {error && <p className="form-error" role="alert">{error}</p>}
+              <button className="btn dark" type="submit" disabled={busy || totals.items === 0}>
+                {busy ? "Placing order…" : "Place order"}
+              </button>
+              <button className="remove" type="button" onClick={() => setStep("cart")}>
+                Back to cart
+              </button>
+            </form>
+          )}
         </div>
       </aside>
     </>
